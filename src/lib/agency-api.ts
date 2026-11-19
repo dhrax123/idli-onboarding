@@ -1,4 +1,5 @@
-import { ASSET_BUCKET, requireSupabase } from './supabase'
+import { ASSET_BUCKET, isSupabaseConfigured, requireSupabase } from './supabase'
+import { demo } from './demo-store'
 import { normalisePayload } from './onboarding-api'
 import type { AssetRecord, OnboardingPayload, OnboardingStatus } from './types'
 
@@ -45,12 +46,14 @@ export const STATUS_META: Record<OnboardingStatus, { label: string; tone: 'neutr
 }
 
 export async function fetchStats(): Promise<DashboardStats> {
+  if (!isSupabaseConfigured) return demo.stats()
   const { data, error } = await requireSupabase().rpc('dashboard_stats')
   if (error) throw error
   return data
 }
 
 export async function fetchSessions(): Promise<SessionListItem[]> {
+  if (!isSupabaseConfigured) return (await demo.sessions()) as SessionListItem[]
   const { data, error } = await requireSupabase()
     .from('onboarding_sessions')
     .select(
@@ -74,6 +77,7 @@ export interface NewSessionInput {
 }
 
 export async function createSession(input: NewSessionInput) {
+  if (!isSupabaseConfigured) return demo.create(input)
   const { data, error } = await requireSupabase().rpc('create_onboarding_session', {
     p_company_name: input.company_name,
     p_project_name: input.project_name,
@@ -89,6 +93,7 @@ export async function createSession(input: NewSessionInput) {
 }
 
 export async function fetchSessionDetail(id: string): Promise<OnboardingPayload> {
+  if (!isSupabaseConfigured) return normalisePayload(await demo.detail(id))
   const { data, error } = await requireSupabase().rpc('get_session_detail', { p_session_id: id })
   if (error) throw error
   if (!data) throw new Error('Session not found')
@@ -96,6 +101,7 @@ export async function fetchSessionDetail(id: string): Promise<OnboardingPayload>
 }
 
 export async function updateStatus(id: string, status: OnboardingStatus) {
+  if (!isSupabaseConfigured) return demo.patch(id, { status, ...(status === 'submitted' ? { submitted_at: new Date().toISOString() } : {}) })
   const patch: Record<string, unknown> = { status }
   if (status === 'submitted') patch.submitted_at = new Date().toISOString()
   const { error } = await requireSupabase().from('onboarding_sessions').update(patch).eq('id', id)
@@ -103,17 +109,20 @@ export async function updateStatus(id: string, status: OnboardingStatus) {
 }
 
 export async function updateExpiry(id: string, expiresAt: string | null) {
+  if (!isSupabaseConfigured) return demo.patch(id, { expires_at: expiresAt })
   const { error } = await requireSupabase().from('onboarding_sessions').update({ expires_at: expiresAt }).eq('id', id)
   if (error) throw error
 }
 
 export async function regenerateToken(id: string) {
+  if (!isSupabaseConfigured) return demo.regenerate(id)
   const { data, error } = await requireSupabase().rpc('regenerate_session_token', { p_session_id: id })
   if (error) throw error
   return data as string
 }
 
 export async function deleteSession(id: string) {
+  if (!isSupabaseConfigured) return demo.remove(id)
   const sb = requireSupabase()
   const { data: assets } = await sb.from('uploaded_assets').select('storage_path').eq('session_id', id)
   const { data: session } = await sb.from('onboarding_sessions').select('public_token, client_id').eq('id', id).single()
@@ -134,6 +143,7 @@ export async function deleteSession(id: string) {
 }
 
 export async function fetchComments(sessionId: string): Promise<InternalComment[]> {
+  if (!isSupabaseConfigured) return demo.comments(sessionId)
   const { data, error } = await requireSupabase()
     .from('internal_comments')
     .select('id, body, created_at, author_id, author:agency_users(full_name, email)')
@@ -144,6 +154,7 @@ export async function fetchComments(sessionId: string): Promise<InternalComment[
 }
 
 export async function addComment(sessionId: string, body: string) {
+  if (!isSupabaseConfigured) return demo.addComment(sessionId, body)
   const sb = requireSupabase()
   const { data: auth } = await sb.auth.getUser()
   const { error } = await sb.from('internal_comments').insert({ session_id: sessionId, body, author_id: auth.user?.id })
@@ -151,11 +162,17 @@ export async function addComment(sessionId: string, body: string) {
 }
 
 export async function deleteComment(id: string) {
+  if (!isSupabaseConfigured) return demo.deleteComment(id)
   const { error } = await requireSupabase().from('internal_comments').delete().eq('id', id)
   if (error) throw error
 }
 
 export async function assetUrl(asset: AssetRecord, download = false) {
+  if (!isSupabaseConfigured) {
+    const blob = demo.assetBlob(asset.id)
+    if (!blob) throw new Error('File not found')
+    return URL.createObjectURL(blob)
+  }
   if (!asset.storage_path) throw new Error('Missing storage path')
   const { data, error } = await requireSupabase()
     .storage.from(ASSET_BUCKET)
@@ -167,12 +184,13 @@ export async function assetUrl(asset: AssetRecord, download = false) {
 export async function downloadAllAssets(assets: AssetRecord[], zipName: string) {
   const { default: JSZip } = await import('jszip')
   const zip = new JSZip()
-  const sb = requireSupabase()
   const used = new Set<string>()
   for (const a of assets) {
     if (!a.storage_path) continue
-    const { data, error } = await sb.storage.from(ASSET_BUCKET).download(a.storage_path)
-    if (error || !data) continue
+    let data: Blob | null = null
+    if (!isSupabaseConfigured) data = demo.assetBlob(a.id)
+    else data = (await requireSupabase().storage.from(ASSET_BUCKET).download(a.storage_path)).data
+    if (!data) continue
     let name = `${a.category}/${a.file_name}`
     let n = 1
     while (used.has(name)) name = `${a.category}/${n++}-${a.file_name}`

@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 import type { Session } from '@supabase/supabase-js'
-import { supabase } from '@/lib/supabase'
+import { isSupabaseConfigured, supabase } from '@/lib/supabase'
+import { DEMO_USER } from '@/lib/demo-store'
 
 interface AgencyProfile {
   id: string
@@ -28,6 +29,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!supabase) {
+      // Preview mode: signed in as a demo team member, data lives in this browser.
+      if (!isSupabaseConfigured) {
+        setSession({ user: { id: DEMO_USER.id, email: DEMO_USER.email } } as unknown as Session)
+        setProfile(DEMO_USER)
+      }
       setLoading(false)
       return
     }

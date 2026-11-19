@@ -1,4 +1,5 @@
-import { ASSET_BUCKET, requireSupabase } from './supabase'
+import { ASSET_BUCKET, isSupabaseConfigured, requireSupabase } from './supabase'
+import { demo } from './demo-store'
 import { emptyOnboardingData } from './options'
 import type { AssetRecord, OnboardingData, OnboardingPayload } from './types'
 import { DEFAULT_COLOURS } from './colour'
@@ -42,12 +43,14 @@ export function normalisePayload(raw: Record<string, any>): OnboardingPayload {
 }
 
 export async function fetchOnboarding(token: string): Promise<OnboardingPayload> {
+  if (!isSupabaseConfigured) return normalisePayload(await demo.getOnboarding(token))
   const { data, error } = await requireSupabase().rpc('get_onboarding', { p_token: token })
   if (error) throw error
   return normalisePayload(data)
 }
 
 export async function saveOnboarding(token: string, data: OnboardingData, currentStep: number, progress: number) {
+  if (!isSupabaseConfigured) return demo.saveOnboarding(token, data, currentStep, progress)
   const { data: res, error } = await requireSupabase().rpc('save_onboarding', {
     p_token: token,
     p_data: data,
@@ -59,6 +62,7 @@ export async function saveOnboarding(token: string, data: OnboardingData, curren
 }
 
 export async function submitOnboarding(token: string) {
+  if (!isSupabaseConfigured) return demo.submitOnboarding(token)
   const { data, error } = await requireSupabase().rpc('submit_onboarding', { p_token: token })
   if (error) throw error
   return data as { submitted_at: string }
@@ -81,6 +85,7 @@ function safeFileName(name: string) {
 }
 
 export async function uploadAsset(token: string, file: File, category: AssetRecord['category']): Promise<AssetRecord> {
+  if (!isSupabaseConfigured) return demo.uploadAsset(token, file, category)
   if (file.size > MAX_UPLOAD_BYTES) throw new Error(`${file.name} is larger than 25 MB`)
   const sb = requireSupabase()
   const ext = file.name.split('.').pop()?.toLowerCase() ?? ''
@@ -104,6 +109,7 @@ export async function uploadAsset(token: string, file: File, category: AssetReco
 }
 
 export async function removeAsset(token: string, assetId: string) {
+  if (!isSupabaseConfigured) return demo.removeAsset(token, assetId)
   const { error } = await requireSupabase().rpc('remove_asset', { p_token: token, p_asset_id: assetId })
   if (error) throw error
 }

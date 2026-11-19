@@ -5,8 +5,8 @@ import { Toaster } from 'sonner'
 import './index.css'
 import { AuthProvider } from '@/hooks/useAuth'
 import { isSupabaseConfigured } from '@/lib/supabase'
+import { demo } from '@/lib/demo-store'
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout'
-import { BrandMark } from '@/components/BrandMark'
 import { Button } from '@/components/ui'
 import { LoginPage } from '@/pages/LoginPage'
 import { DashboardHome } from '@/pages/DashboardHome'
@@ -14,21 +14,15 @@ import { SessionDetail } from '@/pages/SessionDetail'
 import { OnboardingPage } from '@/pages/OnboardingPage'
 import { PlaygroundPage } from '@/pages/PlaygroundPage'
 
-function SetupRequired() {
+function PreviewBanner() {
+  if (isSupabaseConfigured) return null
   return (
-    <div className="grid min-h-screen place-items-center px-6">
-      <div className="max-w-lg">
-        <BrandMark />
-        <h1 className="mt-8 text-2xl font-semibold tracking-tight">Backend not configured</h1>
-        <p className="mt-2 text-sm leading-relaxed text-muted">
-          This deployment has no Supabase credentials, so nothing can be loaded or saved. Add these environment variables (locally in <code>.env</code>, or in Vercel → Project → Settings → Environment Variables) and redeploy:
-        </p>
-        <pre className="mt-4 overflow-x-auto rounded-xl border border-line bg-surface p-4 text-[13px]">{`VITE_SUPABASE_URL=https://<project-ref>.supabase.co
-VITE_SUPABASE_ANON_KEY=<anon public key>
-VITE_PUBLIC_APP_URL=https://idlistudios.com`}</pre>
-        <p className="mt-4 text-sm text-muted">Then run the SQL migration in <code>supabase/migrations</code>. Full steps are in the README.</p>
-        <Button asChild variant="outline" className="mt-6"><Link to="/playground">Open the design playground (works offline)</Link></Button>
-      </div>
+    <div className="flex items-center justify-center gap-2 bg-ink px-3 py-1.5 text-center text-[12px] text-white">
+      <span className="size-1.5 rounded-full bg-amber-400" />
+      Preview mode · data stays in this browser
+      <button type="button" className="ml-1 underline underline-offset-2 opacity-70 hover:opacity-100" onClick={() => { demo.reset(); window.location.href = '/dashboard' }}>
+        Reset
+      </button>
     </div>
   )
 }
@@ -46,12 +40,13 @@ function NotFound() {
 }
 
 function NeedsBackend({ children }: { children: ReactNode }) {
-  return isSupabaseConfigured ? <>{children}</> : <SetupRequired />
+  return <>{children}</>
 }
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>
+      <PreviewBanner />
       <AuthProvider>
         <Routes>
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
@@ -65,7 +60,7 @@ createRoot(document.getElementById('root')!).render(
           <Route path="*" element={<NotFound />} />
         </Routes>
       </AuthProvider>
-      <Toaster position="bottom-center" toastOptions={{ className: 'font-sans' }} />
+      <Toaster position="top-center" toastOptions={{ className: 'font-sans' }} />
     </BrowserRouter>
   </StrictMode>,
 )
