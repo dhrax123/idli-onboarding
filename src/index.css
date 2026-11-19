@@ -1,0 +1,74 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Instrument Serif", ui-serif, Georgia, serif;
+
+  --color-canvas: #fafaf9;
+  --color-surface: #ffffff;
+  --color-ink: #0c0a09;
+  --color-ink-2: #44403c;
+  --color-muted: #78716c;
+  --color-faint: #a8a29e;
+  --color-line: #e7e5e4;
+  --color-line-strong: #d6d3d1;
+  --color-subtle: #f5f5f4;
+  --color-brand: #0c0a09;
+  --color-success: #15803d;
+  --color-warn: #b45309;
+  --color-danger: #b91c1c;
+  --color-info: #1d4ed8;
+
+  --radius-xl: 14px;
+  --radius-2xl: 20px;
+
+  --animate-fade-up: fade-up 0.45s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  --animate-fade-in: fade-in 0.3s ease-out both;
+
+  @keyframes fade-up {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+}
+
+@layer base {
+  html { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+  body { @apply bg-canvas text-ink font-sans; font-feature-settings: "cv11", "ss01"; }
+  ::selection { background: #0c0a0914; }
+  *:focus-visible { outline: 2px solid #0c0a09; outline-offset: 2px; border-radius: 6px; }
+  input[type="color"] { -webkit-appearance: none; border: none; padding: 0; }
+  input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+  input[type="color"]::-webkit-color-swatch { border: none; border-radius: 8px; }
+}
+
+@utility scrollbar-none {
+  scrollbar-width: none;
+  &::-webkit-scrollbar { display: none; }
+}
+
+/* ---------- Live preview engine: everything reads from CSS variables ---------- */
+.lp {
+  --lp-radius: 10px;
+  --lp-btn-radius: 10px;
+  font-family: var(--lp-font-body);
+  background: var(--lp-bg);
+  color: var(--lp-text);
+  transition: background-color 0.25s ease, color 0.25s ease;
+}
+.lp * { transition: background-color 0.25s ease, color 0.25s ease, border-color 0.25s ease; }
+.lp h1, .lp h2, .lp h3, .lp .lp-heading { font-family: var(--lp-font-heading); }
+.lp .lp-accent-font { font-family: var(--lp-font-accent, var(--lp-font-heading)); }
+.lp .lp-muted { color: color-mix(in srgb, var(--lp-text) 62%, var(--lp-bg)); }
+.lp .lp-line { border-color: color-mix(in srgb, var(--lp-text) 12%, var(--lp-bg)); }
+.lp .lp-surface { background: color-mix(in srgb, var(--lp-text) 4%, var(--lp-bg)); }
+.lp .lp-primary-bg { background: var(--lp-primary); color: var(--lp-on-primary); }
+.lp .lp-secondary-bg { background: var(--lp-secondary); color: var(--lp-on-secondary); }
+.lp .lp-accent-bg { background: var(--lp-accent); color: var(--lp-on-accent); }
+.lp .lp-primary { color: var(--lp-primary); }
+.lp .lp-accent { color: var(--lp-accent); }
+.lp a.lp-link { color: var(--lp-primary); text-decoration: underline; text-underline-offset: 3px; }
+.lp[data-img="duotone"] .lp-duotone { background: var(--lp-primary); mix-blend-mode: color; opacity: 0.6; }
